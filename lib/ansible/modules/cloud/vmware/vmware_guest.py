@@ -55,6 +55,7 @@ options:
         description:
             - Rename a VM
             - New Name of the exising VM
+            - Option only available with state=present
         required: False
         version_added: "2.3"
    name_match:
@@ -1407,8 +1408,9 @@ class PyVmomiHelper(object):
 
         # Mark VM as Template
         if self.params['is_template']:
-            task = self.current_vm_obj.MarkAsTemplate()
-            change_applied = True
+            if not self.current_vm_obj.config.template:
+                task = self.current_vm_obj.MarkAsTemplate()
+                change_applied = True
 
         # Rename VM
         if self.params['new_name']:
@@ -1830,6 +1832,10 @@ def main():
             assert False
     # VM doesn't exist
     else:
+        if module.params['new_name']:
+            module.fail_json(msg="You attempt to rename a VM that does not exist (Maybe you run this task twice ?). Old name: %s, new name: %s" % (
+                module.params['name'],
+                module.params['new_name']))
         if module.params['state'] in ['poweredon', 'poweredoff', 'present', 'restarted', 'suspended']:
             # Create it ...
             result = pyv.deploy_vm()
